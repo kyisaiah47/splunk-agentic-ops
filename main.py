@@ -14,6 +14,8 @@ from typing import Dict
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from agent.investigator import investigate_alert
 from models import AlertWebhook, Investigation
@@ -37,6 +39,7 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # ---------------------------------------------------------------------------
@@ -86,6 +89,11 @@ async def get_investigation(inv_id: str):
     if not inv:
         raise HTTPException(status_code=404, detail="Investigation not found")
     return inv
+
+
+@app.get("/")
+async def dashboard():
+    return FileResponse("static/index.html")
 
 
 @app.get("/health")

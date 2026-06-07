@@ -62,7 +62,7 @@ def send_batch(events: list):
         return
 
     payload = "\n".join(
-        '{"time":' + str(e["time"]) + ',"host":"' + e["host"] + '","sourcetype":"access_combined","index":"web_logs","event":"' + e["event"].replace('"', '\\"') + '"}'
+        '{"time":' + str(e["time"]) + ',"host":"' + e["host"] + '","sourcetype":"' + e.get("sourcetype", "access_combined") + '","index":"' + e.get("index", "web_logs") + '","event":"' + e["event"].replace('"', '\\"') + '"}'
         for e in events
     )
     try:
@@ -126,33 +126,74 @@ def generate_incident(spike_at_minutes_ago: int = 10):
             send_batch(events)
             events = []
 
-    # Inject deploy event 2 min before spike
+    if events:
+        send_batch(events)
+
+    # Inject deploy event to deploy_logs index (separate from web_logs)
     deploy_ts = spike_start - timedelta(minutes=2)
     deploy_event = (
         f'[{deploy_ts.strftime("%Y-%m-%dT%H:%M:%SZ")}] '
         f'INFO deploy: service=web version=v2.4.1 hosts=web-03,web-07 '
-        f'deployer=ci-bot status=success'
+        f'deployer=ci-bot status=success rollback_version=v2.4.0'
     )
-    events.append({
+    send_batch([{
         "time": deploy_ts.timestamp(),
         "host": "deploy-runner",
+        "index": "deploy_logs",
+        "sourcetype": "deploy_log",
         "event": deploy_event,
-    })
-
-    if events:
-        send_batch(events)
+    }])
 
     print(f"Done. Spike started at {spike_start.strftime('%H:%M UTC')}")
     print("Affected hosts: web-03, web-07")
     print("Correlated deploy: v2.4.1 at", deploy_ts.strftime("%H:%M UTC"))
 
 
+def generate_latency_spike(spike_at_minutes_ago: int = 10):
+    """Inject a P99 latency spike on api-gateway — all requests slow, no errors."""
+    print("Generating latency spike scenario...")
+    now = datetime.now(timezone.utc)
+    events = []
+    spike_start = now - timedelta(minutes=spike_at_minutes_ago)
+
+    for m in range(30 * 60):
+        ts = now - timedelta(seconds=(30 * 60 - m))
+        for _ in range(random.randint(2, 6)):
+            host = random.choice(HOSTS)
+            endpoint = random.choice(ENDPOINTS)
+            status = 200
+            # During spike: latency balloons to 8-30 seconds on all hosts
+            if ts >= spike_start:
+                duration_ms = random.randint(8000, 30000)
+            else:
+                duration_ms = random.randint(50, 300)
+            ip = f"10.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(1,254)}"
+            ua = random.choice(USER_AGENTS)
+            log = (
+                f'{ip} - - [{ts.strftime("%d/%b/%Y:%H:%M:%S +0000")}] '
+                f'"GET {endpoint} HTTP/1.1" {status} {random.randint(200,8000)} '
+                f'"{ua}" {duration_ms}ms'
+            )
+            events.append({"time": ts.timestamp(), "host": host, "event": log})
+        if len(events) >= 200:
+            send_batch(events)
+            events = []
+
+    if events:
+        send_batch(events)
+
+    print(f"Done. Latency spike started at {spike_start.strftime('%H:%M UTC')}")
+    print("All hosts affected — no errors, just extreme slowness")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=["normal", "incident"], default="incident")
+    parser.add_argument("--mode", choices=["normal", "incident", "latency"], default="incident")
     args = parser.parse_args()
 
     if args.mode == "normal":
         generate_normal(30)
+    elif args.mode == "latency":
+        generate_latency_spike(spike_at_minutes_ago=10)
     else:
         generate_incident(spike_at_minutes_ago=10)

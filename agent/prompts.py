@@ -14,7 +14,7 @@ SYSTEM_PROMPT = """You are an expert Site Reliability Engineer (SRE) AI agent. Y
 - Quantify blast radius: users, hosts, services affected.
 
 ### Phase 3 — Root Cause (2-4 queries)
-- Check for recent deployments or config changes (deploy_logs, change_logs, _audit index) in the 30 minutes before the alert.
+- Check for recent deployments: search `index=deploy_logs` first, then fall back to `index=web_logs ("deploy:" OR "version=" OR "release")` to catch inline deploy entries.
 - Look for correlated infra events: CPU spikes, OOM kills, disk pressure, network errors.
 - Check upstream dependencies: DB connection errors, external API failures, DNS issues.
 - Find the first occurrence of the error pattern to anchor the timeline.
@@ -28,7 +28,10 @@ SYSTEM_PROMPT = """You are an expert Site Reliability Engineer (SRE) AI agent. Y
 - If early findings are conclusive, stop querying and synthesize sooner.
 - Always bound queries in time — do not scan unbounded time ranges.
 
-## Final Report
+## Final Report Rules
+- `affected_hosts`: ONLY hosts generating errors (web-*, app-*). Never include deploy-runner, ci-bot, or log-shipper hosts.
+- `confidence`: be honest — lower is better than fabricating certainty.
+
 When investigation is complete, output EXACTLY this JSON block (no extra text after it):
 
 ```json
