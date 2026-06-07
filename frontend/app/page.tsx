@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
@@ -35,31 +35,29 @@ export default function Dashboard() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [triggering, setTriggering] = useState<AlertType | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      setInvestigations(await fetchInvestigations());
-    } catch {}
-  }, []);
-
   useEffect(() => {
-    load();
     let timer: ReturnType<typeof setTimeout>;
     const tick = async () => {
-      await load();
-      const hasRunning = investigations.some((i) => i.status === "running");
-      timer = setTimeout(tick, hasRunning ? 2000 : 5000);
+      try {
+        const data = await fetchInvestigations();
+        setInvestigations(data);
+        const hasRunning = data.some((i) => i.status === "running");
+        timer = setTimeout(tick, hasRunning ? 2000 : 5000);
+      } catch {
+        timer = setTimeout(tick, 5000);
+      }
     };
-    timer = setTimeout(tick, 2000);
+    tick();
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [load]);
+  }, []);
 
   async function handleTrigger(key: AlertType) {
     setTriggering(key);
     try {
       await triggerAlert(key);
       setDialogOpen(false);
-      await load();
+      const data = await fetchInvestigations();
+      setInvestigations(data);
     } finally {
       setTriggering(null);
     }

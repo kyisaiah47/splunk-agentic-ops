@@ -7,7 +7,9 @@ import { Clock, Server, CheckCircle, AlertTriangle, Loader2 } from "lucide-react
 import { Investigation } from "@/lib/api";
 
 function timeSince(iso: string) {
-  const secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  // Ensure UTC is parsed correctly — append Z if no timezone offset present
+  const normalized = /[Z+\-]\d*$/.test(iso) ? iso : iso + "Z";
+  const secs = Math.floor((Date.now() - new Date(normalized).getTime()) / 1000);
   if (secs < 60) return `${secs}s ago`;
   if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
   return `${Math.floor(secs / 3600)}h ago`;
@@ -15,7 +17,8 @@ function timeSince(iso: string) {
 
 function duration(inv: Investigation) {
   if (!inv.completed_at) return null;
-  return `${Math.round((new Date(inv.completed_at).getTime() - new Date(inv.started_at).getTime()) / 1000)}s`;
+  const normalize = (s: string) => /[Z+\-]\d*$/.test(s) ? s : s + "Z";
+  return `${Math.round((new Date(normalize(inv.completed_at)).getTime() - new Date(normalize(inv.started_at)).getTime()) / 1000)}s`;
 }
 
 function SeverityBar({ severity }: { severity: string }) {
@@ -30,18 +33,18 @@ function SeverityBar({ severity }: { severity: string }) {
 function StatusBadge({ status }: { status: string }) {
   if (status === "running")
     return (
-      <Badge className="bg-blue-500/15 text-blue-400 border-blue-500/20 gap-1 animate-pulse">
+      <Badge className="bg-primary/15 text-primary border-primary/20 gap-1 animate-pulse">
         <Loader2 className="w-3 h-3 animate-spin" /> Investigating
       </Badge>
     );
   if (status === "completed")
     return (
-      <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/20 gap-1">
+      <Badge className="bg-primary/15 text-primary border-primary/20 gap-1">
         <CheckCircle className="w-3 h-3" /> Resolved
       </Badge>
     );
   return (
-    <Badge className="bg-red-500/15 text-red-400 border-red-500/20 gap-1">
+    <Badge className="bg-destructive/15 text-destructive border-destructive/20 gap-1">
       <AlertTriangle className="w-3 h-3" /> Failed
     </Badge>
   );
@@ -120,7 +123,7 @@ export function InvestigationCard({ inv }: { inv: Investigation }) {
                   {inv.affected_hosts.map((h) => (
                     <span
                       key={h}
-                      className="font-mono text-[11px] bg-blue-500/10 text-blue-300 border border-blue-500/20 rounded px-2 py-0.5"
+                      className="font-mono text-[11px] bg-secondary text-muted-foreground border border-border/60 rounded px-2 py-0.5"
                     >
                       {h}
                     </span>
@@ -131,7 +134,7 @@ export function InvestigationCard({ inv }: { inv: Investigation }) {
 
             {/* Recommendation */}
             {inv.recommendation && (
-              <div className="flex items-start gap-2 text-xs text-emerald-300 bg-emerald-500/5 border border-emerald-500/15 rounded-md px-3 py-2 leading-relaxed">
+              <div className="flex items-start gap-2 text-xs text-primary bg-primary/5 border border-primary/15 rounded-md px-3 py-2 leading-relaxed">
                 <CheckCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                 {inv.recommendation}
               </div>
