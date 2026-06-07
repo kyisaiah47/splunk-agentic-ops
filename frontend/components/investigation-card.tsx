@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
-import { ChevronDown, ChevronUp, Clock, Server, Zap, AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
+import { Clock, Server, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { Investigation } from "@/lib/api";
 
 function timeSince(iso: string) {
@@ -17,136 +15,137 @@ function timeSince(iso: string) {
 
 function duration(inv: Investigation) {
   if (!inv.completed_at) return null;
-  const ms = new Date(inv.completed_at).getTime() - new Date(inv.started_at).getTime();
-  return `${Math.round(ms / 1000)}s`;
+  return `${Math.round((new Date(inv.completed_at).getTime() - new Date(inv.started_at).getTime()) / 1000)}s`;
 }
 
-function SeverityIndicator({ severity }: { severity: string }) {
+function SeverityBar({ severity }: { severity: string }) {
   const s = severity.toLowerCase();
-  if (s === "critical") return <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_6px_#ef4444] flex-shrink-0" />;
-  if (s === "high") return <span className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_6px_#fb923c] flex-shrink-0" />;
-  if (s === "medium") return <span className="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0" />;
-  return <span className="w-2 h-2 rounded-full bg-zinc-500 flex-shrink-0" />;
+  const color =
+    s === "critical" ? "bg-red-500" :
+    s === "high" ? "bg-orange-400" :
+    s === "medium" ? "bg-yellow-400" : "bg-zinc-500";
+  return <span className={`w-1 self-stretch rounded-full flex-shrink-0 ${color}`} />;
 }
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "running")
-    return <Badge className="bg-blue-500/15 text-blue-400 border-blue-500/20 animate-pulse gap-1"><Loader2 className="w-3 h-3 animate-spin" />Running</Badge>;
+    return (
+      <Badge className="bg-blue-500/15 text-blue-400 border-blue-500/20 gap-1 animate-pulse">
+        <Loader2 className="w-3 h-3 animate-spin" /> Investigating
+      </Badge>
+    );
   if (status === "completed")
-    return <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/20 gap-1"><CheckCircle className="w-3 h-3" />Completed</Badge>;
-  return <Badge className="bg-red-500/15 text-red-400 border-red-500/20 gap-1"><AlertTriangle className="w-3 h-3" />Failed</Badge>;
+    return (
+      <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/20 gap-1">
+        <CheckCircle className="w-3 h-3" /> Resolved
+      </Badge>
+    );
+  return (
+    <Badge className="bg-red-500/15 text-red-400 border-red-500/20 gap-1">
+      <AlertTriangle className="w-3 h-3" /> Failed
+    </Badge>
+  );
 }
 
 export function InvestigationCard({ inv }: { inv: Investigation }) {
-  const [expanded, setExpanded] = useState(false);
-  const dur = duration(inv);
   const conf = Math.round((inv.confidence ?? 0) * 100);
+  const dur = duration(inv);
 
   return (
-    <Card
-      className="cursor-pointer transition-all border-border/50 hover:border-border bg-card/60 backdrop-blur-sm"
-      onClick={() => setExpanded((v) => !v)}
-    >
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-3">
-          <SeverityIndicator severity={inv.severity} />
-          <span className="font-medium text-foreground flex-1 text-sm">{inv.alert_name}</span>
-          <StatusBadge status={inv.status} />
-          {expanded ? (
-            <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          )}
-        </div>
-        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1 pl-5">
-          <span className="font-mono">{inv.id}</span>
-          <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            {timeSince(inv.started_at)}
-          </span>
-          {dur && <span>{dur} investigation</span>}
-          {conf > 0 && <span className="text-primary font-medium">{conf}% confidence</span>}
-        </div>
-      </CardHeader>
+    <Card className="bg-card/60 border-border/50 hover:border-border transition-colors overflow-hidden">
+      <CardContent className="p-0">
+        <div className="flex gap-0">
+          <SeverityBar severity={inv.severity} />
 
-      {expanded && (
-        <CardContent className="pt-0 space-y-4" onClick={(e) => e.stopPropagation()}>
-          <Separator className="opacity-50" />
-
-          {inv.root_cause && (
-            <div className="rounded-lg bg-muted/40 border border-border/50 p-3 text-sm">
-              <span className="text-muted-foreground text-xs uppercase tracking-wide font-medium">Root Cause</span>
-              <p className="mt-1 text-foreground">{inv.root_cause}</p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Confidence</p>
-              <div className="flex items-center gap-2">
-                <Progress value={conf} className="h-1.5 flex-1" />
-                <span className="text-xs font-medium text-primary w-8 text-right">{conf}%</span>
+          <div className="flex-1 p-5 space-y-4 min-w-0">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-semibold text-sm text-foreground leading-snug truncate">
+                  {inv.alert_name}
+                </p>
+                <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                  <span className="font-mono">{inv.id}</span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {timeSince(inv.started_at)}
+                  </span>
+                  {dur && <span>{dur}</span>}
+                </div>
               </div>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">First Seen</p>
-              <p className="text-foreground font-mono text-xs">{inv.first_seen ?? "—"}</p>
+              <StatusBadge status={inv.status} />
             </div>
 
-            {(inv.affected_hosts?.length > 0) && (
-              <div className="col-span-2">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
-                  <Server className="w-3 h-3" /> Affected Hosts
+            {/* Root cause */}
+            {inv.root_cause ? (
+              <div className="text-xs text-muted-foreground bg-muted/30 rounded-md px-3 py-2 leading-relaxed border border-border/30">
+                <span className="text-foreground/50 font-medium uppercase tracking-wide text-[10px]">Root Cause · </span>
+                {inv.root_cause}
+              </div>
+            ) : inv.status === "running" ? (
+              <div className="text-xs text-muted-foreground bg-muted/20 rounded-md px-3 py-2 border border-border/20 flex items-center gap-2">
+                <Loader2 className="w-3 h-3 animate-spin text-primary flex-shrink-0" />
+                Agent is querying Splunk…
+              </div>
+            ) : null}
+
+            {/* Confidence + first seen */}
+            {(conf > 0 || inv.first_seen) && (
+              <div className="flex items-center gap-6">
+                {conf > 0 && (
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Confidence</span>
+                      <span className="text-xs font-semibold text-primary">{conf}%</span>
+                    </div>
+                    <Progress value={conf} className="h-1" />
+                  </div>
+                )}
+                {inv.first_seen && (
+                  <div className="flex-shrink-0">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">First Seen</p>
+                    <p className="text-xs font-mono text-foreground">{inv.first_seen}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Affected hosts */}
+            {inv.affected_hosts?.length > 0 && (
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                  <Server className="w-3 h-3" /> {inv.affected_hosts.length} host{inv.affected_hosts.length > 1 ? "s" : ""}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {inv.affected_hosts.map((h) => (
-                    <span key={h} className="font-mono text-xs bg-blue-500/10 text-blue-300 border border-blue-500/20 rounded px-2 py-0.5">
+                    <span
+                      key={h}
+                      className="font-mono text-[11px] bg-blue-500/10 text-blue-300 border border-blue-500/20 rounded px-2 py-0.5"
+                    >
                       {h}
                     </span>
                   ))}
                 </div>
               </div>
             )}
-          </div>
 
-          {inv.summary && (
-            <div className="rounded-lg bg-muted/30 border border-border/40 p-3 text-sm text-muted-foreground leading-relaxed">
-              {inv.summary}
-            </div>
-          )}
-
-          {inv.recommendation && (
-            <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/20 p-3 text-sm text-emerald-300 leading-relaxed flex gap-2">
-              <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              {inv.recommendation}
-            </div>
-          )}
-
-          {inv.evidence?.length > 0 && (
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
-                <Zap className="w-3 h-3" /> Evidence ({inv.evidence.length} queries)
-              </p>
-              <div className="space-y-1.5">
-                {inv.evidence.slice(0, 6).map((e, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <span className="bg-muted rounded px-1.5 py-0.5 font-mono flex-shrink-0 text-foreground/60">
-                      {e.tool}
-                    </span>
-                    <span className="truncate">{Object.values(e.query ?? {})[0] ?? ""}…</span>
-                  </div>
-                ))}
+            {/* Recommendation */}
+            {inv.recommendation && (
+              <div className="flex items-start gap-2 text-xs text-emerald-300 bg-emerald-500/5 border border-emerald-500/15 rounded-md px-3 py-2 leading-relaxed">
+                <CheckCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                {inv.recommendation}
               </div>
-            </div>
-          )}
+            )}
 
-          {inv.error && (
-            <div className="rounded-lg bg-red-500/5 border border-red-500/20 p-3 text-sm text-red-400">
-              {inv.error}
-            </div>
-          )}
-        </CardContent>
-      )}
+            {/* Error */}
+            {inv.error && (
+              <div className="text-xs text-red-400 bg-red-500/5 border border-red-500/15 rounded-md px-3 py-2">
+                {inv.error}
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
     </Card>
   );
 }
