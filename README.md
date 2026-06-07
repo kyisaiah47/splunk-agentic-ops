@@ -36,7 +36,7 @@ cp .env.example .env
 
 ```bash
 python main.py
-# → http://localhost:8000
+# → http://localhost:9000
 ```
 
 ### 4. Generate sample incident data
