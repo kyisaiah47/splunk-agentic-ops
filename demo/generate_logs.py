@@ -186,14 +186,49 @@ def generate_latency_spike(spike_at_minutes_ago: int = 10):
     print("All hosts affected — no errors, just extreme slowness")
 
 
+def generate_db_exhaustion(spike_at_minutes_ago: int = 10):
+    """Inject connection pool exhaustion events into app_logs."""
+    print("Generating DB connection pool exhaustion scenario...")
+    now = datetime.now(timezone.utc)
+    events = []
+    spike_start = now - timedelta(minutes=spike_at_minutes_ago)
+
+    for m in range(30 * 60):
+        ts = now - timedelta(seconds=(30 * 60 - m))
+        for _ in range(random.randint(1, 4)):
+            host = random.choice(HOSTS)
+            if ts >= spike_start:
+                msg = random.choice([
+                    "ERROR connection pool exhausted: no available connections for db=orders_db",
+                    "ERROR too many connections: db=orders_db current=250 max=250",
+                    "WARN connection pool exhausted: retrying in 500ms db=orders_db",
+                    "ERROR timeout waiting for connection from pool db=orders_db after 5000ms",
+                ])
+            else:
+                msg = f"INFO db connection acquired: db=orders_db pool_size={random.randint(10,50)} available={random.randint(5,40)}"
+            log = f'[{ts.strftime("%Y-%m-%dT%H:%M:%S.000Z")}] {msg} host={host}'
+            events.append({"time": ts.timestamp(), "host": host, "index": "app_logs", "sourcetype": "app_log", "event": log})
+        if len(events) >= 200:
+            send_batch(events)
+            events = []
+
+    if events:
+        send_batch(events)
+
+    print(f"Done. DB exhaustion started at {spike_start.strftime('%H:%M UTC')}")
+    print("All hosts affected — orders_db connection pool at max capacity")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=["normal", "incident", "latency"], default="incident")
+    parser.add_argument("--mode", choices=["normal", "incident", "latency", "db_connections"], default="incident")
     args = parser.parse_args()
 
     if args.mode == "normal":
         generate_normal(30)
     elif args.mode == "latency":
         generate_latency_spike(spike_at_minutes_ago=10)
+    elif args.mode == "db_connections":
+        generate_db_exhaustion(spike_at_minutes_ago=10)
     else:
         generate_incident(spike_at_minutes_ago=10)
