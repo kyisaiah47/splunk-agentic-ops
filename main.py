@@ -8,6 +8,7 @@ Endpoints:
   GET  /health             Liveness check
 """
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from typing import Dict
 
@@ -113,4 +114,5 @@ async def health():
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=9000, reload=True)
+    port = int(os.getenv("PORT", "9000"))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
