@@ -6,6 +6,9 @@ Built for the **Splunk Agentic Ops Hackathon** (Observability track).
 
 **Live Demo:** https://splunk-agentic-ops.loca.lt
 
+
+[![Watch Demo](https://img.shields.io/badge/YouTube-Watch%20Demo-FF0000?style=flat&logo=youtube&logoColor=white)](https://www.youtube.com/watch?v=Nj25zOJiZf0)
+
 ---
 
 ## How it works
