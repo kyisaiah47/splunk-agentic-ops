@@ -1,9 +1,6 @@
 #!/bin/bash
-# Starts public localtunnel URLs for both the backend and frontend.
-# Backend:  https://splunk-agentic-ops-api.loca.lt → localhost:9000
-# Frontend: https://splunk-agentic-ops.loca.lt     → localhost:3002
+# Exposes the FastAPI backend publicly for the Vercel frontend to call.
+# Backend: https://splunk-agentic-ops-api.loca.lt → localhost:9000
 
-echo "Starting tunnels..."
-lt --port 9000 --subdomain splunk-agentic-ops-api &
-lt --port 3002 --subdomain splunk-agentic-ops &
-wait
+echo "Starting backend tunnel..."
+lt --port 9000 --subdomain splunk-agentic-ops-api

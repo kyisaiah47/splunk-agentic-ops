@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: splunk-agentic-ops-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python3 main.py
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SPLUNK_HOST
+        sync: false
+      - key: SPLUNK_PORT
+        sync: false
+      - key: SPLUNK_SCHEME
+        sync: false
+      - key: SPLUNK_USERNAME
+        sync: false
+      - key: SPLUNK_PASSWORD
+        sync: false
+      - key: SPLUNK_HEC_TOKEN
+        sync: false
+      - key: SPLUNK_HEC_URL
+        sync: false
+      - key: SLACK_WEBHOOK_URL
+        sync: false
+      - key: USE_MCP
+        value: "false"

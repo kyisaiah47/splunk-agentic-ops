@@ -1,4 +1,8 @@
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:9000";
+const HEADERS: Record<string, string> = {
+  "bypass-tunnel-reminder": "true",
+  "ngrok-skip-browser-warning": "true",
+};
 
 export interface Evidence {
   tool: string;
@@ -25,7 +29,7 @@ export interface Investigation {
 }
 
 export async function fetchInvestigations(): Promise<Investigation[]> {
-  const res = await fetch(`${API}/investigations`, { cache: "no-store" });
+  const res = await fetch(`${API}/investigations`, { cache: "no-store", headers: HEADERS });
   if (!res.ok) throw new Error("Failed to fetch");
   return res.json();
 }
@@ -59,7 +63,7 @@ const PAYLOADS: Record<AlertType, object> = {
 export async function triggerAlert(type: AlertType): Promise<{ investigation_id: string }> {
   const res = await fetch(`${API}/webhook/splunk`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...HEADERS },
     body: JSON.stringify({ ...PAYLOADS[type], trigger_time: new Date().toISOString() }),
   });
   if (!res.ok) throw new Error("Failed to trigger alert");
