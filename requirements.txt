@@ -7,3 +7,4 @@ pydantic>=2.10.0
 slack-sdk>=3.33.0
 splunk-sdk>=2.0.0
 rich>=13.0.0
+mcp>=1.0.0
